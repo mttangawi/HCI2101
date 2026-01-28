@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة XO العصرية</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* شاشة البداية */
+        #start-screen, #game-screen {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            margin-bottom: 80px; /* مساحة للفوتر */
+        }
+
+        h1 { margin-bottom: 1.5rem; color: var(--primary); }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            background: #e2e8f0;
+        }
+
+        button.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        .btn-start {
+            background: var(--secondary);
+            color: white;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 1.1rem;
+        }
+
+        /* اللعبة */
+        .hidden { display: none !important; }
+
+        .status {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: #f1f5f9;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .cell:hover { background: #e2e8f0; }
+        .cell.x { color: var(--primary); }
+        .cell.o { color: var(--secondary); }
+
+        /* الفوتر الإجباري */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #1e293b;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+        }
+
+        .footer-content p { margin: 2px 0; }
+        .student-name { color: #38bdf8; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <h1>لعبة XO</h1>
+        <p>اختر نمط اللعب:</p>
+        <div class="mode-selector">
+            <button id="btn-1p" class="active" onclick="setMode(1)">لاعب واحد</button>
+            <button id="btn-2p" onclick="setMode(2)">لاعبين</button>
+        </div>
+        
+        <input type="text" id="p1-name" placeholder="اسم اللاعب الأول (X)" value="لاعب 1">
+        <input type="text" id="p2-name" class="hidden" placeholder="اسم اللاعب الثاني (O)" value="لاعب 2">
+        
+        <button class="btn-start" onclick="startGame()">ابدأ اللعب</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div class="status" id="status-text">دور: لاعب 1</div>
+        <div class="board" id="board">
+            <div class="cell" onclick="handleCellClick(0)" data-index="0"></div>
+            <div class="cell" onclick="handleCellClick(1)" data-index="1"></div>
+            <div class="cell" onclick="handleCellClick(2)" data-index="2"></div>
+            <div class="cell" onclick="handleCellClick(3)" data-index="3"></div>
+            <div class="cell" onclick="handleCellClick(4)" data-index="4"></div>
+            <div class="cell" onclick="handleCellClick(5)" data-index="5"></div>
+            <div class="cell" onclick="handleCellClick(6)" data-index="6"></div>
+            <div class="cell" onclick="handleCellClick(7)" data-index="7"></div>
+            <div class="cell" onclick="handleCellClick(8)" data-index="8"></div>
+        </div>
+        <button onclick="resetGame()">إعادة اللعب</button>
+        <button style="margin-top: 10px; background: #94a3b8; color: white;" onclick="backToMenu()">القائمة الرئيسية</button>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <p>اسم الطالب: <span class="student-name">MOHAMMED TARIQ TALAL ANGAWI (محمد طارق طلال عنقاوى)</span></p>
+            <p>الرقم الجامعي: <b>446000044</b></p>
+            <p>بإشراف: <b>Mohammed Ahmed Jabali</b></p>
+        </div>
+    </footer>
+
+    <script>
+        let gameMode = 1; // 1 = vs Computer, 2 = vs Human
+        let currentPlayer = 'X';
+        let gameState = ["", "", "", "", "", "", "", "", ""];
+        let gameActive = true;
+        let names = { X: "لاعب 1", O: "الكمبيوتر" };
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        function setMode(mode) {
+            gameMode = mode;
+            document.getElementById('btn-1p').classList.toggle('active', mode === 1);
+            document.getElementById('btn-2p').classList.toggle('active', mode === 2);
+            document.getElementById('p2-name').classList.toggle('hidden', mode === 1);
+        }
+
+        function startGame() {
+            names.X = document.getElementById('p1-name').value || "لاعب 1";
+            names.O = gameMode === 2 ? (document.getElementById('p2-name').value || "لاعب 2") : "الكمبيوتر";
+            
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            resetGame();
+        }
+
+        function handleCellClick(index) {
+            if (gameState[index] !== "" || !gameActive) return;
+
+            makeMove(index, 'X');
+
+            if (gameActive && gameMode === 1) {
+                setTimeout(computerMove, 500);
+            } else if (gameActive && gameMode === 2) {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                updateStatus();
+            }
+        }
+
+        function makeMove(index, player) {
+            gameState[index] = player;
+            const cell = document.querySelector(`[data-index='${index}']`);
+            cell.innerText = player;
+            cell.classList.add(player.toLowerCase());
+            checkResult();
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+            let emptyCells = gameState.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+            if (emptyCells.length > 0) {
+                let randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                makeMove(randomIndex, 'O');
+                if (gameActive) {
+                    currentPlayer = 'X';
+                    updateStatus();
+                }
+            }
+        }
+
+        function checkResult() {
+            let roundWon = false;
+            for (let condition of winningConditions) {
+                let a = gameState[condition[0]];
+                let b = gameState[condition[1]];
+                let c = gameState[condition[2]];
+                if (a === '' || b === '' || c === '') continue;
+                if (a === b && b === c) {
+                    roundWon = true;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                document.getElementById('status-text').innerText = `الفائز هو: ${names[gameState.find(val => val !== "")]}`;
+                gameActive = false;
+                return;
+            }
+
+            if (!gameState.includes("")) {
+                document.getElementById('status-text').innerText = "تعادل!";
+                gameActive = false;
+                return;
+            }
+        }
+
+        function updateStatus() {
+            document.getElementById('status-text').innerText = `دور: ${names[currentPlayer]}`;
+        }
+
+        function resetGame() {
+            currentPlayer = 'X';
+            gameState = ["", "", "", "", "", "", "", "", ""];
+            gameActive = true;
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.innerText = "";
+                cell.classList.remove('x', 'o');
+            });
+            updateStatus();
+        }
+
+        function backToMenu() {
+            document.getElementById('start-screen').classList.remove('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
